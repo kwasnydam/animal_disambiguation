@@ -14,6 +14,8 @@ DEFAULT_ROOT_DIRECTORY = up(up(up(__file__)))   # Get directory two levels above
 DEFAULT_DATA_DIRECTORY = os.path.join(DEFAULT_ROOT_DIRECTORY, 'data')
 DEFAULT_RAW_DATA_DIRECTORY = os.path.join(DEFAULT_DATA_DIRECTORY, 'raw')
 DEFAULT_INTERIM_DATA_DIRECTORY = os.path.join(DEFAULT_DATA_DIRECTORY, 'interim')
+DEFAULT_PROCESSED_DATA_DIRECTORY = os.path.join(DEFAULT_DATA_DIRECTORY, 'processed')
+DEFAULT_PROCESSED_TEXT_DATA_DIRECTORY = os.path.join(DEFAULT_PROCESSED_DATA_DIRECTORY, 'text')
 
 DEFAULT_ENCODING = 'utf-8'
 
@@ -80,4 +82,24 @@ def process_text(text):
     sentences = split_into_sentences(lines)
     valid_sentences = filter_normalize_sentences(sentences)
     return valid_sentences
+
+
+def build_text_dataset(read_directory, save_directory, encoding):
+    """Based on filtered  and normalized data in READ_DIRECTORY create single csv file
+
+    Structure of the created file will be as follows:
+    sentence;class
+
+    Sentences from 'animal.txt' are class 'animal'
+    Sentences from 'device.txt' are class 'device
+    """
+    save_dir = os.path.join(save_directory, 'dataset.csv')
+    with codecs.open(save_dir, 'w', encoding) as of:
+        for context in ['animal', 'device']:
+            read_path = os.path.join(read_directory, '{}.txt'.format(context))
+            with codecs.open(read_path, 'r', encoding) as rf:
+                sentences = rf.read().splitlines()
+                for sentence in sentences:
+                    output_line = '{};{}\n'.format(sentence, context)
+                    of.write(output_line)
 

@@ -18,7 +18,7 @@ def filter_raw_data(read_directory, save_directory, encoding='utf-8'):
         Default: <project_root>/data/raw
     SAVE_DIRECTORY is directory to store filtered  data.
         Default: <project_root>/data/interim
-    ENCODING is the encoding used to save the wikipedia articles conten
+    ENCODING is the encoding used to save the filtered sentences
         Default: 'utf-8'
 
     Creates files 'animal.txt' and 'device.txt' in SAVE_DIRECTORY
