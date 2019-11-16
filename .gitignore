@@ -95,3 +95,6 @@ venv.bak/
 
 # pdf files
 *.pdf
+
+# content of data folder
+/data/

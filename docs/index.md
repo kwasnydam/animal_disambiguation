@@ -18,12 +18,13 @@ _mouse_ and return whether it is an animal or a peripheral.
 | Milestone | Completed Hours | Estimated Cost | Estimated Finish | Actual Finish |
 |:---------:|:---------------:|:--------------:|:----------------:|---------------|
 |Propose architecture and estimate work|4|6                |08.11                  |        08.11       |
-|Implement a simple web service using Flask RESTful API   | 0  | 6  | 10.11  |   |
-|Think out the way to obtain a reliable training and testing data   | 0  | 6  | 13.11  |   |
+|Implement a simple web service skeleton using Flask RESTful API   | 4  | 6  | 10.11  |  |
+|Think out the way to obtain a reliable training and testing data   | 0  | 8  | 13.11  |   |
 |Collect and preprocess the data   | 0  | 6  | 14.11  |   |
 |Research on the model viable for the disambiguation task   | 0  | 6  | 15.11  |   |
 |Implement and Validate the model   | 0  | 6  | 16.11  |   |
 |Integrate and test the application   |  0 | 6  | 17.11  |   |
+|Extend the design and functionality of the API   | 0  |  3 | 17.11  |   |
 |Bug fixes and deployment|   | 12  | 19.11  |   |
 
 
