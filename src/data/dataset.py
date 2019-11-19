@@ -1,12 +1,26 @@
 import os
 import codecs
+import string
+import pickle
 
 import wikipedia
 from nltk.tokenize import sent_tokenize
+from nltk.corpus import stopwords
+from nltk import word_tokenize
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import LabelEncoder
 
 DEFAULT_TITLES = {
     'animal': ('mouse', 'kangaroo mouse', 'hopping mouse'),
     'device': ('computer mouse', 'optical mouse')
+}
+
+DEFAULT_VECTORIZER_SETTINGS = {
+    'ngram_range': (1, 3),
+    'min_df': 2,
+    'max_df': 0.5
 }
 
 up = os.path.dirname
@@ -16,6 +30,9 @@ DEFAULT_RAW_DATA_DIRECTORY = os.path.join(DEFAULT_DATA_DIRECTORY, 'raw')
 DEFAULT_INTERIM_DATA_DIRECTORY = os.path.join(DEFAULT_DATA_DIRECTORY, 'interim')
 DEFAULT_PROCESSED_DATA_DIRECTORY = os.path.join(DEFAULT_DATA_DIRECTORY, 'processed')
 DEFAULT_PROCESSED_TEXT_DATA_DIRECTORY = os.path.join(DEFAULT_PROCESSED_DATA_DIRECTORY, 'text')
+
+DEFAULT_FEATURES_DIRECTORY = os.path.join(DEFAULT_PROCESSED_DATA_DIRECTORY, 'features')
+DEFAULT_DATA_MODEL_DIRECTORY = os.path.join(DEFAULT_ROOT_DIRECTORY, 'models')
 
 DEFAULT_ENCODING = 'utf-8'
 
@@ -93,6 +110,9 @@ def build_text_dataset(read_directory, save_directory, encoding):
     Sentences from 'animal.txt' are class 'animal'
     Sentences from 'device.txt' are class 'device
     """
+
+    punctuation = set(string.punctuation)
+
     save_dir = os.path.join(save_directory, 'dataset.csv')
     with codecs.open(save_dir, 'w', encoding) as of:
         for context in ['animal', 'device']:
@@ -100,6 +120,151 @@ def build_text_dataset(read_directory, save_directory, encoding):
             with codecs.open(read_path, 'r', encoding) as rf:
                 sentences = rf.read().splitlines()
                 for sentence in sentences:
-                    output_line = '{};{}\n'.format(sentence, context)
+                    # removing punctuation as it carries little info yet could break our csv file
+                    s = ''.join(ch for ch in sentence if ch not in punctuation)
+                    output_line = '{};{}\n'.format(s, context)
                     of.write(output_line)
 
+class TextLabelsVectorizer:
+    """Responsible for vectorization of text into feature vector (tfidf) and classes labels into binary labels
+
+    The interface follows sklearn conventions, so it has following methods:
+    fit(text_corpus, class_labels) - fits the vectorizer to the given text corpus
+    transform(text, class_label=None) - using fitted parameters transforms the text and return it
+    fit_transform(text_corpus, class_labels) - peform fit(...) then transform
+    get_params() - returns parameters of a fitted Vectorizer
+    set_params(params) - load the vectorizer with given set of prefit params
+    Attributes:
+        label_encoder - object transforming categorical labels into numerical values (0,1)
+        vectorizer - object responsible for vectorization of text with tfidf method
+    """
+
+    def __init__(self, vectorizer_params):
+        self.label_encoder = LabelEncoder()
+        self.vectorizer = TfidfVectorizer(
+            analyzer='word',
+            tokenizer=self.tokenize,
+            **vectorizer_params
+        )
+        self.save_name = self._get_save_name(vectorizer_params)
+        self.stopwords = stopwords.words('english')
+
+    def tokenize(self, text):
+        """Performs tokenization of input sentence
+
+        First, using nltk word_tokenize splits the sentence into tokens
+        Then, lowercases all tokens
+        Finally, removes stopwords tokens and digits
+        return a list of valid tokens
+
+        Args:
+            text: string representing a single sentence.
+
+        Returns:
+            List of tokens
+        """
+        words = word_tokenize(text)
+        words = [w.lower() for w in words]
+        return [w for w in words if w not in self.stopwords and not w.isdigit()]
+
+    def fit(self, text_corpora, class_labels):
+        """Fits the estimator to the data.
+
+        For text, performs tokenization with punctuation, stopwords and digits removal, followed bytfidf vectorization.
+        For labels, perform label encoding, storing the labels corresponding to numerical classes
+
+        Args:
+            text_corpora - iterable of strings containing sentences to fit the tfidf on
+            class_labels - iterbale of class labels to fit into numerical labels
+
+        Returns:
+            None
+        """
+        self.vectorizer.fit(text_corpora)  # train on variables from train set (dont pass classes)
+        self.label_encoder.fit(class_labels)
+
+    def transform(self, text, class_labels=None):
+        """Transforms input text into feature vector using fit parameters. If class_label not None, encodes it.
+
+        Args:
+            text - string or list of strings conataining sentences to vectorize
+            class_labels (optional) - class label or list of class labels to encode
+
+        Returns:
+            vectorized_text - numpy array of shape(num_sentences, num_fit_features)
+            encoded_labels - if class_label provided, return encoded class label
+        """
+        features = self.vectorizer.transform(text.copy())
+        features = features.todense()   # we dont want sparse matirces onjects
+        if class_labels is not None:
+            encoded_labels = self.label_encoder.transform(class_labels)
+            return features, encoded_labels
+        else:
+            return features
+
+    def fit_transform(self, text, class_labels):
+        """Performs fit, then transform. Look fit and transform documentation"""
+        self.fit(text, class_labels)
+        return self.transform(text, class_labels)
+
+    def get_params(self):
+        """Returns mapping of {Attirbutes: attribute_params}"""
+        params = {
+            'label_encoder': self.label_encoder.get_params(),
+            'vectorizer': self.vectorizer.get_params()
+        }
+        return params
+
+    def set_params(self, params):
+        """Sets parameters of label encoder and vectorizer to params.
+
+        Args:
+            params - mapping {attribute: atrribute_parameters} gotten from TextLabelsVectorizer.get_params()
+        """
+        self.label_encoder.set_params(params['label_encoder'])
+        self.vectorizer.set_params(params['vectorizer'])
+
+    def _get_save_name(self, params):
+        maxdf = params['max_df']
+        mindf = params['min_df']
+        ngrams = '{}{}'.format(*params['ngram_range'])
+
+        return 'maxdf_{}_mindf_{}_ngrams_{}'.format(maxdf, mindf, ngrams)
+
+
+def build_dataset_and_datamodel(read_directory, data_save_directory, data_model_save_directory,vectorizer_params):
+    text_vectorizer = TextLabelsVectorizer(vectorizer_params)
+    train_filepath = os.path.join(read_directory, 'train.csv')
+    validation_filepath = os.path.join(read_directory, 'validation.csv')
+    train_data = pd.read_csv(train_filepath, sep=';')
+    validation_data = pd.read_csv(validation_filepath, sep=';')
+
+    # fit to train dataset
+    text_vectorizer.fit(train_data.iloc[:,0], train_data.iloc[:,1])
+    extract_and_save_features(
+        train_data.iloc[:,0],
+        train_data.iloc[:,1],
+        os.path.join(data_save_directory, 'train.npy'),
+        text_vectorizer.transform
+                              )
+    print('Train features avaiable at {}'.format(data_save_directory))
+
+    extract_and_save_features(
+        validation_data.iloc[:, 0],
+        validation_data.iloc[:, 1],
+        os.path.join(data_save_directory, 'validation.npy'),
+        text_vectorizer.transform
+    )
+    print('Validation features avaiable at {}'.format(data_save_directory))
+
+    # save data model (will be used on evaluation and in production)
+    with open(os.path.join(DEFAULT_DATA_MODEL_DIRECTORY, 'data_model.pickle'), 'wb') as of:
+        pickle.dump(text_vectorizer.get_params(), of, protocol=pickle.HIGHEST_PROTOCOL)
+    print('Data model avaiable at {}'.format(data_model_save_directory))
+
+def extract_and_save_features(data, classes, save_path, extract_function):
+    features, classes = extract_function(data, classes)
+    dataset = np.hstack((features, classes.reshape(classes.size, -1)))
+    np.save(os.path.join(save_path), dataset)
+    # print('Train features avaiable at {}'.format(data_save_directory))
+>>>>>>> prototype
