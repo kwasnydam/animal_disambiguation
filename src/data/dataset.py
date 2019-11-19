@@ -222,6 +222,9 @@ class TextLabelsVectorizer:
         self.label_encoder.set_params(params['label_encoder'])
         self.vectorizer.set_params(params['vectorizer'])
 
+    def get_classes_name(self, binary_classes):
+        return self.label_encoder.inverse_transform(binary_classes)
+
     def _get_save_name(self, params):
         maxdf = params['max_df']
         mindf = params['min_df']
@@ -264,4 +267,4 @@ def extract_and_save_features(data, classes, save_path, extract_function):
     features, classes = extract_function(data, classes)
     dataset = np.hstack((features, classes.reshape(classes.size, -1)))
     np.save(os.path.join(save_path), dataset)
-    # print('Train features avaiable at {}'.format(data_save_directory))
+
