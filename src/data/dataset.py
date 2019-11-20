@@ -2,6 +2,7 @@ import os
 import codecs
 import string
 import pickle
+from collections import defaultdict
 
 import wikipedia
 from nltk.tokenize import sent_tokenize
@@ -138,7 +139,7 @@ class TextLabelsVectorizer:
     """
 
     def __init__(self, vectorizer_params):
-        self.label_encoder = LabelEncoder()
+        self.label_encoder = MoreFrequentZeroLabelEncoder()
         self.vectorizer = TfidfVectorizer(
             analyzer='word',
             tokenizer=self.tokenize,
@@ -220,7 +221,7 @@ class TextLabelsVectorizer:
             params - mapping {attribute: atrribute_parameters} gotten from TextLabelsVectorizer.get_params()
         """
         self.label_encoder.set_params(params['label_encoder'])
-        self.vectorizer.set_params(params['vectorizer'])
+        self.vectorizer.set_params(**params['vectorizer'])
 
     def get_classes_name(self, binary_classes):
         return self.label_encoder.inverse_transform(binary_classes)
@@ -231,6 +232,50 @@ class TextLabelsVectorizer:
         ngrams = '{}{}'.format(*params['ngram_range'])
 
         return 'maxdf_{}_mindf_{}_ngrams_{}'.format(maxdf, mindf, ngrams)
+
+
+class MoreFrequentZeroLabelEncoder:
+
+    def __init__(self):
+        self.labels = {}
+        self.inverse_mapping = {}
+
+    def fit(self, classes):
+        available_labels, counts = np.unique(classes, return_counts=True)
+        labels_counts = zip(available_labels, counts)
+        labels_counts = sorted(labels_counts, key=lambda x: x[1], reverse=True)
+        print(labels_counts)
+        for index, label in enumerate(labels_counts):
+            self.labels[label[0]] = index
+            self.inverse_mapping[str(index)] = label[0]
+
+    def transform(self, classes):
+        result = np.zeros(classes.shape).astype(np.int32)
+        for label in self.labels.keys():
+            result[classes == label] = self.labels[label]
+        return result
+
+    def inverse_transform(self, encoded_class):
+        output = []
+        try:
+            for idx in range(encoded_class.size):
+                el = encoded_class[idx]
+                output.append(self.inverse_mapping[str(el)])
+        except Exception as e:
+            output = self.inverse_mapping[str(encoded_class)]
+
+        return output
+
+    def get_params(self):
+        params = {
+            'labels': self.labels,
+            'inverse_mapping': self.inverse_mapping
+        }
+        return params
+
+    def set_params(self, params):
+        self.labels = params['labels']
+        self.inverse_mapping = params['inverse_mapping']
 
 
 def build_dataset_and_datamodel(read_directory, data_save_directory, data_model_save_directory,vectorizer_params):
@@ -262,6 +307,7 @@ def build_dataset_and_datamodel(read_directory, data_save_directory, data_model_
     with open(os.path.join(DEFAULT_DATA_MODEL_DIRECTORY, 'data_model.pickle'), 'wb') as of:
         pickle.dump(text_vectorizer.get_params(), of, protocol=pickle.HIGHEST_PROTOCOL)
     print('Data model avaiable at {}'.format(data_model_save_directory))
+
 
 def extract_and_save_features(data, classes, save_path, extract_function):
     features, classes = extract_function(data, classes)
