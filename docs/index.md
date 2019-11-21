@@ -54,7 +54,7 @@ request and return some random output that fits the requirements
 ## Proposed Solution:
 
 Tech stack:
-Python, 3rd party libraries: Flask, scikit-learn, numpy, pandas
+Python, 3rd party libraries: Flask, scikit-learn, numpy, pandas, nltk
 
 Why these?
   * Python - a go-to programming language for ML and fast prototyping
@@ -63,15 +63,26 @@ Why these?
   * scikit-learn - a go-to ML framework containing a lot of different models, perfect for creating a prototype solution
   * numpy - essential all there where computation are involved
   * pandas - a handy library to handle the data processing
+  * nltk - BSD licensed toolkit for fast prototyping of NLP solutions, perfect for text manipulation pipeline and simple models
 
 
 Since the web API part was initially the most mysterious I have done some search on that and decided, that
 I will design the application as a Flask RESTful API app. It will accept a user query and pass it down the model as well as send the results obtained from the model. The decision is motivated by the fact, that Flask seems like a lightweighted and easy to set up choice for building a working prototype and that is
 ultimately the most important part when starting on with a new ML project.
 
-Data collection method and model choice are still WIP.
+As for the model, the first working version is going to use a simple lesk module from NLTK framework: it does not need any training data, the only
+data we need to collect and label are for the evaluation. 
 
 The application needs to be structured so that the API depends only on a simple interface (like model.predict(sentence)) and multiple models can be used.
 
 ## Testing
-More once the data piepline will be established
+
+Unit Testing:
+  * Simple checks if the data transfromations and models given some well established inputs are doing their job
+  * Edge cases (empty queries, queires without the key word, ambigous queries (ex. 'it is mouse'))
+
+Correctness:
+  * Dummy classifier: predicts the majority class from the data set all the estimate
+  * The model we develope must beat the dummy classifier (must be skillful)
+  * Performance measures:
+What we are primarilly concerned about is the
