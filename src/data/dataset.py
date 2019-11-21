@@ -8,10 +8,10 @@ import wikipedia
 from nltk.tokenize import sent_tokenize
 from nltk.corpus import stopwords
 from nltk import word_tokenize
+from nltk.stem import PorterStemmer
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.preprocessing import LabelEncoder
 
 DEFAULT_TITLES = {
     'animal': ('mouse', 'kangaroo mouse', 'hopping mouse'),
@@ -21,7 +21,7 @@ DEFAULT_TITLES = {
 DEFAULT_VECTORIZER_SETTINGS = {
     'ngram_range': (1, 3),
     'min_df': 2,
-    'max_df': 0.5
+    'max_df': 1.0
 }
 
 up = os.path.dirname
@@ -149,12 +149,13 @@ class TextLabelsVectorizer:
         )
         self.save_name = self._get_save_name(vectorizer_params)
         self.stopwords = stopwords.words('english')
+        self.vocabulary = None
 
     def tokenize(self, text):
         """Performs tokenization of input sentence
 
         First, using nltk word_tokenize splits the sentence into tokens
-        Then, lowercases all tokens
+        Then, lowercases all tokens and stem the tokens
         Finally, removes stopwords tokens and digits
         return a list of valid tokens
 
@@ -164,9 +165,13 @@ class TextLabelsVectorizer:
         Returns:
             List of tokens
         """
+        stemmer = PorterStemmer()
+        punctuation = set(string.punctuation)
         words = word_tokenize(text)
         words = [w.lower() for w in words]
-        return [w for w in words if w not in self.stopwords and not w.isdigit()]
+        words = [stemmer.stem(word) for word in words]
+        tokens = [w for w in words if w not in self.stopwords and not w.isdigit() and w not in punctuation]
+        return tokens
 
     def fit(self, text_corpora, class_labels):
         """Fits the estimator to the data.
@@ -212,7 +217,8 @@ class TextLabelsVectorizer:
         """Returns mapping of {Attirbutes: attribute_params}"""
         params = {
             'label_encoder': self.label_encoder.get_params(),
-            'vectorizer': self.vectorizer.get_params()
+            'vectorizer': self.vectorizer.get_params(),
+            'vocabulary': self.vocabulary
         }
         return params
 
@@ -224,6 +230,7 @@ class TextLabelsVectorizer:
         """
         self.label_encoder.set_params(params['label_encoder'])
         self.vectorizer.set_params(**params['vectorizer'])
+        self.vocabulary = params['vocabulary']
 
     def get_classes_name(self, binary_classes):
         return self.label_encoder.inverse_transform(binary_classes)
@@ -263,6 +270,7 @@ class MoreFrequentZeroLabelEncoder:
             for idx in range(encoded_class.size):
                 el = encoded_class[idx]
                 output.append(self.inverse_mapping[str(el)])
+            output = np.asarray(output, dtype=str)
         except Exception as e:
             output = self.inverse_mapping[str(encoded_class)]
 
@@ -307,7 +315,7 @@ def build_dataset_and_datamodel(read_directory, data_save_directory, data_model_
 
     # save data model (will be used on evaluation and in production)
     with open(os.path.join(DEFAULT_DATA_MODEL_DIRECTORY, 'data_model.pickle'), 'wb') as of:
-        pickle.dump(text_vectorizer.get_params(), of, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(text_vectorizer, of, protocol=pickle.HIGHEST_PROTOCOL)
     print('Data model avaiable at {}'.format(data_model_save_directory))
 
 
