@@ -198,8 +198,13 @@ class TextLabelsVectorizer:
             vectorized_text - numpy array of shape(num_sentences, num_fit_features)
             encoded_labels - if class_label provided, return encoded class label
         """
+        try:
+            # we want a list not a string
+            assert type(text) is not str
+        except AssertionError as e:
+            text = [text]
         features = self.vectorizer.transform(text.copy())
-        features = features.todense()   # we dont want sparse matirces onjects
+        features = features.todense()   # we dont want sparse matirces objects
         if class_labels is not None:
             encoded_labels = self.label_encoder.transform(class_labels)
             return features, encoded_labels
