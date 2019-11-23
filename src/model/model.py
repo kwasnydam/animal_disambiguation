@@ -79,13 +79,18 @@ class MMDisambiguator:
 
     def predict(self, unseen_features, mode='classification', threshold=0.5, format='text', report=False):
         predicted_probability = self.classificator.predict_proba(unseen_features)
+
         if mode == 'classification':
             classification_binary = self._classify(predicted_probability, threshold).astype(np.int)
             classification = classification_binary
             if format == 'text':
                 classification = self.data_model.get_classes_name(classification_binary)
                 # print(classification)
-            result = np.hstack((classification[:, np.newaxis], predicted_probability[:,classification_binary]))
+
+            result = []
+            for idx in range(classification.shape[0]):
+                result.append([classification[idx], predicted_probability[idx,classification_binary[idx]]])
+            result = np.asarray(result)
         elif mode == 'prediction':
             result = predicted_probability
         return result
