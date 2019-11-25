@@ -214,29 +214,30 @@ class TextLabelsVectorizer:
         else:
             return features
 
+    def transform_labels(self, labels):
+        return self.label_encoder.transform(labels)
+
     def fit_transform(self, text, class_labels):
         """Performs fit, then transform. Look fit and transform documentation"""
         self.fit(text, class_labels)
         return self.transform(text, class_labels)
 
-    def get_params(self):
-        """Returns mapping of {Attirbutes: attribute_params}"""
-        params = {
+    def serialize(self):
+        """Returns objects and parameters necessary to perform transformation"""
+        to_serialize = {
             'label_encoder': self.label_encoder.get_params(),
-            'vectorizer': self.vectorizer.get_params(),
-            'vocabulary': self.vocabulary
+            'vectorizer': self.vectorizer
         }
-        return params
+        return to_serialize
 
-    def set_params(self, params):
-        """Sets parameters of label encoder and vectorizer to params.
+    def deserialize(self, serialized_representation):
+        """Loads the serialized representation back into our object
 
         Args:
-            params - mapping {attribute: atrribute_parameters} gotten from TextLabelsVectorizer.get_params()
+            serialized_representation - mapping {attribute: objects} gotten from TextLabelsVectorizer.serialize()
         """
-        self.label_encoder.set_params(params['label_encoder'])
-        self.vectorizer.set_params(**params['vectorizer'])
-        self.vocabulary = params['vocabulary']
+        self.label_encoder.set_params(serialized_representation['label_encoder'])
+        self.vectorizer = serialized_representation['vectorizer']
 
     def get_classes_name(self, binary_classes):
         return self.label_encoder.inverse_transform(binary_classes)
@@ -250,12 +251,20 @@ class TextLabelsVectorizer:
 
 
 class MoreFrequentZeroLabelEncoder:
+    """Label Encoder that treats more frequent class as 0 and is easily serialized
+
+    Methods:
+        fit - fit labels and inverse labels dictionaries to training data
+        transform - using trained dictionaries encode the text labels into numerical classes
+        inverse_transform - using trained dictionaries decode numerical classes into text labels
+    """
 
     def __init__(self):
         self.labels = {}
         self.inverse_mapping = {}
 
     def fit(self, classes):
+        """learn the mapping text labels -> numerical classes"""
         available_labels, counts = np.unique(classes, return_counts=True)
         labels_counts = zip(available_labels, counts)
         labels_counts = sorted(labels_counts, key=lambda x: x[1], reverse=True)
@@ -265,12 +274,14 @@ class MoreFrequentZeroLabelEncoder:
             self.inverse_mapping[str(index)] = label[0]
 
     def transform(self, classes):
+        """map labels -> numerical classes"""
         result = np.zeros(classes.shape).astype(np.int32)
         for label in self.labels.keys():
             result[classes == label] = self.labels[label]
         return result
 
     def inverse_transform(self, encoded_class):
+        """map numercial classes -> labels"""
         output = []
         try:
             for idx in range(encoded_class.size):
@@ -321,7 +332,8 @@ def build_dataset_and_datamodel(read_directory, data_save_directory, data_model_
 
     # save data model (will be used on evaluation and in production)
     with open(os.path.join(DEFAULT_DATA_MODEL_DIRECTORY, 'data_model.pickle'), 'wb') as of:
-        pickle.dump(text_vectorizer, of, protocol=pickle.HIGHEST_PROTOCOL)
+        serialized_data_model = text_vectorizer.serialize()
+        pickle.dump(serialized_data_model, of)
     print('Data model avaiable at {}'.format(data_model_save_directory))
 
 

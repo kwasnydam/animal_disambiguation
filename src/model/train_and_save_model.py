@@ -1,3 +1,4 @@
+""""""
 import click
 import os
 import json
@@ -55,15 +56,15 @@ def train_and_save_model(
 
     pred_model = model.build_mmdisambiguator(
         data_model_params=data_model_params,
-        data_model_path=data_model_read_path,
+        data_model_path=os.path.join(dataset.DEFAULT_DATA_MODEL_DIRECTORY, 'data_model.pickle'),
         classificator_parameters=model_params
     )
 
     train_data = np.load(train_data_read_path, allow_pickle=True)
     features, classes = train_data[:, :-1], train_data[:, -1]
 
-    report = pred_model.train(features=features, classes=classes, report=save_training_report)
-    trained_model_parameters = pred_model.get_classifier_params()
+    report = pred_model.train(data=features, classes=classes, report=save_training_report, source='features')
+    # trained_model_parameters = pred_model.get_classifier_params()
     if report is not None:
         print(report)
         with open(training_report_save_path, 'w') as rf:
@@ -71,10 +72,7 @@ def train_and_save_model(
 
     model_save_path = os.path.join(model_save_directory, 'trained_model.pickle')
     with open(model_save_path, 'wb') as mf:
-        pickle.dump(pred_model, mf)
-    model_parms_save_path = os.path.join(model_save_directory, 'model_params.json')
-    with open(model_parms_save_path, 'w') as mpf:
-        json.dump(trained_model_parameters, mpf)
+        pickle.dump(pred_model.serialize(), mf)
 
 
 if __name__ == '__main__':
