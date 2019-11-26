@@ -13,28 +13,13 @@ _mouse_ and return whether it is an animal or a peripheral.
 * it must be implemented as a web service
 * it must accept an input sentence and return a classification result
 
-# Milestones
-
-| Milestone | Completed Hours | Estimated Cost | Estimated Finish | Actual Finish |
-|:---------:|:---------------:|:--------------:|:----------------:|---------------|
-|Propose architecture and estimate work|4|6                |08.11                  |        08.11       |
-|Implement a simple web service skeleton using Flask RESTful API   | 4  | 6  | 10.11  |  |
-|Think out the way to obtain a reliable training and testing data   | 0  | 8  | 13.11  |   |
-|Collect and preprocess the data   | 0  | 6  | 14.11  |   |
-|Research on the model viable for the disambiguation task   | 0  | 6  | 15.11  |   |
-|Implement and Validate the model   | 0  | 6  | 16.11  |   |
-|Integrate and test the application   |  0 | 6  | 17.11  |   |
-|Extend the design and functionality of the API   | 0  |  3 | 17.11  |   |
-|Bug fixes and deployment|   | 12  | 19.11  |   |
-
-
 # Technical Architecture
 
 There are at least 3 separate tasks that needs to be accounted for:
 
    1. The API, handling the requests and generating a response.
    2. The model, trained on the data and ready for evaluation.
-   3. The data to train and crossvalidate the model on.
+   3. The data to train and validate the model on.
 
 ## Problem Breakdown
 
@@ -45,7 +30,6 @@ output.
 
 The following steps needs to be undertaken:
 
-
   * Since for now I have no idea about how to run a webservice, I need to dig into tutorials and preferably create a dummy API that would accept a
 request and return some random output that fits the requirements
   * I need to research about a kind of ML models that could be used in this task. For the time being some simple bag of words representation and building a dictionary seems like a plausible option.
@@ -53,8 +37,8 @@ request and return some random output that fits the requirements
 
 ## Proposed Solution:
 
-Tech stack:
-Python, 3rd party libraries: Flask, scikit-learn, numpy, pandas, nltk
+### Tech stack:
+Git, Python, 3rd party libraries: Flask, scikit-learn, numpy, pandas, nltk, jupyter notebook
 
 Why these?
   * Python - a go-to programming language for ML and fast prototyping
@@ -64,14 +48,26 @@ Why these?
   * numpy - essential all there where computation are involved
   * pandas - a handy library to handle the data processing
   * nltk - BSD licensed toolkit for fast prototyping of NLP solutions, perfect for text manipulation pipeline and simple models
+  * jupyter notebook - great, bsd licensed tool for fast prototyping and experiment documentation
 
+### Application Architecture
+ *  API - A simple RESTful API built with the Flask framework. Flask is a lightweighted choice good for prototyping.1
+ The API will accept the GET query, check if it is valid (contains word mouse) and call the model to make the prediciton.
+ It will then return the response containing the model prediction. There is no extensive data processing here, as it
+ is part of the model
 
-Since the web API part was initially the most mysterious I have done some search on that and decided, that
-I will design the application as a Flask RESTful API app. It will accept a user query and pass it down the model as well as send the results obtained from the model. The decision is motivated by the fact, that Flask seems like a lightweighted and easy to set up choice for building a working prototype and that is
-ultimately the most important part when starting on with a new ML project.
+ *  Model - I have decided to build a model around the following concepts:
+    *   Task - Binary Classification
+    *   data - A simple LabelEncoder that maps more common class in the datset into 0 and a TfIdf vectorizer that
+    performs the text transformation onto numerical features (TfIdf features)
+    *   model - Logistic Regression. It is simple, provides a probability output, so the decision can be postponed and
+    based on the task at hand while manipulating the threshold. Also, it's weights are interpretable.
 
-As for the model, the first working version is going to use a simple lesk module from NLTK framework: it does not need any training data, the only
-data we need to collect and label are for the evaluation. 
+ *  Data - I have built my own dataset around the wikipedia articles:
+    *   With 'wikipedia' module I have built my own, small dataset consisting of some articles about mouse in device
+    and animal context. The dataset is skewed towards the 'device' class, however with this method it is easy to extend
+    the datset by providing more articles in the datset download script and rebuilding it. The code for data aquisition is
+    part of the repository.
 
 The application needs to be structured so that the API depends only on a simple interface (like model.predict(sentence)) and multiple models can be used.
 
@@ -83,6 +79,13 @@ Unit Testing:
 
 Correctness:
   * Dummy classifier: predicts the majority class from the data set all the estimate
-  * The model we develope must beat the dummy classifier (must be skillful)
+  * The model we develop must beat the dummy classifier (must be skillful)
   * Performance measures:
-What we are primarilly concerned about is the
+    * accuracy
+    * precision
+    * recall
+    * f1 score
+    * confussion matrix
+
+  With further experiments we could construct the Precision/Recall curves (suitable for imbalanced dataset as the one
+  I have used in my experiments)

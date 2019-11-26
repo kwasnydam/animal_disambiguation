@@ -1,3 +1,5 @@
+"""Based on processed data in READ_DIRECTORY, build the features."""
+
 import click
 import os
 

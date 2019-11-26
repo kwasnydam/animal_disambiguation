@@ -1,4 +1,8 @@
-""""""
+"""Script used to train and save the classifier.
+
+As written in the function doc, it requires user to pass some paths and configuration, otherwise it just uses the
+project defaults
+"""
 import click
 import os
 import json
@@ -56,7 +60,7 @@ def train_and_save_model(
 
     pred_model = model.build_mmdisambiguator(
         data_model_params=data_model_params,
-        data_model_path=os.path.join(dataset.DEFAULT_DATA_MODEL_DIRECTORY, 'data_model.pickle'),
+        data_model_path=data_model_read_path,
         classificator_parameters=model_params
     )
 
@@ -64,7 +68,6 @@ def train_and_save_model(
     features, classes = train_data[:, :-1], train_data[:, -1]
 
     report = pred_model.train(data=features, classes=classes, report=save_training_report, source='features')
-    # trained_model_parameters = pred_model.get_classifier_params()
     if report is not None:
         print(report)
         with open(training_report_save_path, 'w') as rf:

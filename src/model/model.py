@@ -1,19 +1,10 @@
-"""Represents the classification model I am going to use in my problem
+"""Contains the classification model I am going to use in my problem and some utility functions.
 
-As of current version, it wraps Logistic Regression and Data Model. It has the following interface:
-train - used to fit the model to the training data
-predict - used to perfrom prediciton on unseen data
-get_params - used to return parameters of a trained classifire
-set_params - used to fill the model with a parameters of a pretrained classifier
+Functions
+    build_mmdisambiguator - build the core application object with the collaborators info
 
-Using sklearn.metrics it provides methods for generation of the performance report (generate_report=True)
-flag on evaluation.
-
-using Logistic Regression it trains the classifier which will be then used to make probability  predictions.
-If user wishes classification instead of prediciton, he needs to pass ''
-
-With current interface, it is possible to replace LR with another classifier as long as it complies to the same
-interface (fit, predict, predict_proba, get_params, set_params)
+Classes
+    MMDisambiguator - core class of the application
 """
 import pickle
 import os
@@ -54,6 +45,7 @@ def try_opening_file_pickle(path):
 
 
 def build_mmdisambiguator(data_model_params, data_model_path, classificator_parameters, classificator_path=None):
+    """Given collaborator parameters and /or load paths, build the MMDisambiguator"""
     if classificator_path is None:
         data_model = dataset.TextLabelsVectorizer(data_model_params)
         data_model_saved = try_opening_file_pickle(data_model_path)
@@ -75,15 +67,15 @@ class MMDisambiguator:
 
     It uses data_model for feature and text manipulation and Logistic Regression for performing prediction
 
-    With 'source' flag user controls if the training/prediction is preformed from precomputed umercial features
+    With 'source' flag user controls if the training/prediction is preformed from precomputed numercial features
     or text. If it is done from text, the input is put through feature_extraction first.
 
     Methods:
         train - fit the classifier or both data model and classifier from training data
         predict - get prediction on data. the data can be ingle and multiple samples
+        transform_labels - get numerical representation of labels
         performance_report - generate summary of performance
         serialize - get representation for saving
-        deserialize - load serialized components
     """
 
     def __init__(self, data_model:dataset.TextLabelsVectorizer, classificator: LogisticRegression):

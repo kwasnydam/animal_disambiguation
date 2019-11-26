@@ -1,3 +1,4 @@
+"""From RAW data filter out sentences not containing the word mouse or mice."""
 import click
 import codecs
 import os

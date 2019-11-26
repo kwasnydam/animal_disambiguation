@@ -1,8 +1,21 @@
+"""dataset module contains classes and helper functions used to perform various datset related actions.
+
+Helper functions:
+    download_files - download files from wikipedia
+    try_download_file -  try downloading a single article from wikipedia
+    process_text - process raw text from wikiepdia into valid sentences that can be used to build the dataset
+    build_text_dataset - build dataset from valid sentences
+    build_dataset_and_datamodel - from text dataset, build features and save them as features dataset, save the vectorizer
+
+Classes:
+    TextLabelsVectorizer - resposnible for transforming sentences into numerical representatio
+    MoreFrequentZeroLabelEncoder - Label Encoder which assign 0 to more frequent class ina training dataset
+"""
+
 import os
 import codecs
 import string
 import pickle
-from collections import defaultdict
 
 import wikipedia
 from nltk.tokenize import sent_tokenize
@@ -40,6 +53,13 @@ DEFAULT_ENCODING = 'utf-8'
 
 
 def download_files(titles, save_directory, encoding):
+    """Based on titles, download articles and save to save_directory with encoding.
+
+    Args
+        titles - dictionary of form {context: wikiepdia_article_title}
+        save_directory - to save downlaoded data
+        encoding - to use to save the data
+    """
     for context in titles.keys():
         for title in titles[context]:
             save_filepath = os.path.join(save_directory, context, '{}.txt'.format(title))
@@ -49,6 +69,7 @@ def download_files(titles, save_directory, encoding):
 
 
 def try_download_file(title):
+    """Try downloading the article with given title from wikipedia."""
     try:
         raw = wikipedia.page(title).content
     except wikipedia.exceptions.DisambiguationError as e:
@@ -305,7 +326,16 @@ class MoreFrequentZeroLabelEncoder:
         self.inverse_mapping = params['inverse_mapping']
 
 
-def build_dataset_and_datamodel(read_directory, data_save_directory, data_model_save_directory,vectorizer_params):
+def build_dataset_and_datamodel(read_directory, data_save_directory, data_model_save_directory, vectorizer_params):
+    """Based on the parameters and saving directories, build dataset and save vectorizer used to generate it.
+
+    Builds both training and evaluation features
+    Args
+        read_directory - directory containing processed text data
+        data_save_directory - directory to save features in
+        data_model_save_directory - directory to save the fit vectorizer in
+        vectorizer_params - parameters of the TfIdf vectorizer
+    """
     text_vectorizer = TextLabelsVectorizer(vectorizer_params)
     train_filepath = os.path.join(read_directory, 'train.csv')
     validation_filepath = os.path.join(read_directory, 'validation.csv')
