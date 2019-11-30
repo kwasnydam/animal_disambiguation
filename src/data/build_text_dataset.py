@@ -1,3 +1,8 @@
+"""Based on the FILTERED files in the READ_DIRECTORY, build the dataset.
+
+This script is meant for usage after the 'download_raw_data'.
+"""
+
 import click
 import codecs
 import os

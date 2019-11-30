@@ -1,3 +1,8 @@
+"""Use this script to download raw data from wikipedia.
+
+You can specify custom TITLES from wikipedia to be downloaded, check dataset.DEFAULT_TITLES for the format.
+"""
+
 import click
 
 import src.data.dataset as dataset
