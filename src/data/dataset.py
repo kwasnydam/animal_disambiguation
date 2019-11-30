@@ -25,6 +25,8 @@ from nltk.stem import PorterStemmer
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.exceptions import NotFittedError
+from sklearn.utils.validation import check_is_fitted
 
 
 DEFAULT_TITLES = {
@@ -148,6 +150,7 @@ def build_text_dataset(read_directory, save_directory, encoding):
                     output_line = '{};{}\n'.format(s, context)
                     of.write(output_line)
 
+
 class TextLabelsVectorizer:
     """Responsible for vectorization of text into feature vector (tfidf) and classes labels into binary labels
 
@@ -195,6 +198,22 @@ class TextLabelsVectorizer:
         tokens = [w for w in words if w not in self.stopwords and not w.isdigit() and w not in punctuation]
         return tokens
 
+    def is_fitted(self):
+        """Check if the classifier is fitted."""
+        try:
+            check_is_fitted(self.vectorizer, '_tfidf')
+        except NotFittedError:
+            return False
+        return True
+
+    def _is_valid_data(self, data):
+        if isinstance(data, list):
+            return len(data) > 0
+        elif isinstance(data, pd.DataFrame) or isinstance(data, pd.Series):
+            return not data.empty
+        else:
+            raise TypeError('Unsupported data type')
+
     def fit(self, text_corpora, class_labels):
         """Fits the estimator to the data.
 
@@ -202,13 +221,23 @@ class TextLabelsVectorizer:
         For labels, perform label encoding, storing the labels corresponding to numerical classes
 
         Args:
-            text_corpora - iterable of strings containing sentences to fit the tfidf on
-            class_labels - iterbale of class labels to fit into numerical labels
+            text_corpora - pd.Series or list of strings containing sentences to fit the tfidf on
+            class_labels - pd.Series or list of class labels to fit into numerical labels
 
         Returns:
             None
         """
+        if not self._is_valid_data(text_corpora):
+            raise ValueError('Empty sentences')
+        if not self._is_valid_data(class_labels):
+            raise ValueError('Empty labels')
+
         self.vectorizer.fit(text_corpora)  # train on variables from train set (dont pass classes)
+        self.fit_labels(class_labels)
+
+    def fit_labels(self, class_labels):
+        if not self._is_valid_data(class_labels):
+            raise ValueError('Empty labels')
         self.label_encoder.fit(class_labels)
 
     def transform(self, text, class_labels=None):
@@ -227,10 +256,16 @@ class TextLabelsVectorizer:
             assert type(text) is not str
         except AssertionError as e:
             text = [text]
-        features = self.vectorizer.transform(text.copy())
-        features = features.todense()   # we dont want sparse matirces objects
+
+        try:
+            features = self.vectorizer.transform(text.copy())
+        except NotFittedError:
+            raise NotFittedError('The TfIdf vectorizer has not been fit. Fit the Vectorizer before attemmpting '
+                                 'to transform')
+
+        features = features.todense()   # we dont want sparse matrices objects
         if class_labels is not None:
-            encoded_labels = self.label_encoder.transform(class_labels)
+            encoded_labels = self.transform_labels(class_labels)
             return features, encoded_labels
         else:
             return features
@@ -289,14 +324,18 @@ class MoreFrequentZeroLabelEncoder:
         available_labels, counts = np.unique(classes, return_counts=True)
         labels_counts = zip(available_labels, counts)
         labels_counts = sorted(labels_counts, key=lambda x: x[1], reverse=True)
-        print(labels_counts)
         for index, label in enumerate(labels_counts):
             self.labels[label[0]] = index
             self.inverse_mapping[str(index)] = label[0]
 
     def transform(self, classes):
         """map labels -> numerical classes"""
-        result = np.zeros(classes.shape).astype(np.int32)
+        try:
+            result = np.zeros(classes.shape).astype(np.int32)
+        except AttributeError:
+            classes = np.asarray(classes)
+            result = np.zeros(classes.shape).astype(np.int32)
+
         for label in self.labels.keys():
             result[classes == label] = self.labels[label]
         return result
@@ -305,14 +344,22 @@ class MoreFrequentZeroLabelEncoder:
         """map numercial classes -> labels"""
         output = []
         try:
-            for idx in range(encoded_class.size):
+            for idx in range(self._get_size(encoded_class)):
                 el = encoded_class[idx]
                 output.append(self.inverse_mapping[str(el)])
             output = np.asarray(output, dtype=str)
-        except Exception as e:
+        except TypeError as e:
             output = self.inverse_mapping[str(encoded_class)]
 
         return output
+
+    def _get_size(self, data):
+        if isinstance(data, list):
+            return len(data)
+        elif isinstance(data, pd.Series) or isinstance(data, np.ndarray):
+            return data.size
+        else:
+            raise TypeError('Unsupported data of type {}'.format(type(data)))
 
     def get_params(self):
         params = {

@@ -9,9 +9,7 @@ Classes
 import pickle
 import os
 
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 import sklearn.metrics as metrics
 
@@ -62,6 +60,10 @@ def build_mmdisambiguator(data_model_params, data_model_path, classificator_para
     return disambiguator
 
 
+class NotTrainedException(Exception):
+    pass
+
+
 class MMDisambiguator:
     """The class representing the core logic of the disambiguation app.
 
@@ -72,7 +74,7 @@ class MMDisambiguator:
 
     Methods:
         train - fit the classifier or both data model and classifier from training data
-        predict - get prediction on data. the data can be ingle and multiple samples
+        predict - get prediction on data. the data can be single or multiple samples
         transform_labels - get numerical representation of labels
         performance_report - generate summary of performance
         serialize - get representation for saving
@@ -81,6 +83,10 @@ class MMDisambiguator:
     def __init__(self, data_model:dataset.TextLabelsVectorizer, classificator: LogisticRegression):
         self.data_model = data_model
         self.classificator = classificator
+
+    def is_trained(self):
+        """Returns True if the underlying classification model is trained"""
+        return hasattr(self.classificator, "coef_")
 
     def train(self, data, classes, report=False, source='features'):
         """Train the model with training data DATA and training labels CLASSES
@@ -104,23 +110,26 @@ class MMDisambiguator:
             return None
 
     def transform_labels(self, labels):
+        """Returns numerical encoding of text labels"""
         return self.data_model.transform_labels(labels)
 
     def predict(self, unseen_features, mode='classification', threshold=0.5, format='text', source='features'):
         """Predict classes on unseen data.
 
         Args:
-            unseen_features - 'string' or list of 'string' if source = 'text'. feature array if source = 'features'
+            unseen_features - 'string' or list/pandas Series of 'string' if source = 'text'.
+                               numpy array if source = 'features'
             mode -
                 'classification' - predict probabilities and then make classifcation decision based on 'threshold
                 'predicition' - return predicted probabilities
             threshold - if mode = 'classification', threshold for the decision
             source - 'text' if sentences, 'features' if input already transformed
         """
+        if not self.is_trained():
+            raise NotTrainedException('Attempted to perform prediction on a model that has not been trained')
+
         if source == 'text':
-            # print('text before transofrmation: {}'.format(len(unseen_features)))
             unseen_features = self.data_model.transform(unseen_features)
-            # print('text after transofrmation: {}'.format(len(unseen_features)))
 
         predicted_probability = self.classificator.predict_proba(unseen_features)
 
@@ -151,7 +160,7 @@ class MMDisambiguator:
         """Generates performance of the given classifier given predicted and real classes
 
         Args:
-            predicted_classes: - iterable containing the prediciton results, len(num_of_samples)
+            predicted_classes - iterable containing the prediciton results, len(num_of_samples)
             real_classes - iterable containing ground truth classes, len(num_of_samples)
 
         Output:
