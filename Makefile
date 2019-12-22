@@ -1,13 +1,21 @@
 .ONESHELL:
-.PHONY: requirements
+.PHONY: clean
 
 PYTHON_INTERPRETER = python
 
-run: requirements
+run: .venv
 	@echo "Starting the service..."
 	$(PYTHON_INTERPRETER) -m api.run
 
-data: requirements
+tests: .venv
+	@echo "Running unittest..."
+	$(PYTHON_INTERPRETER) -m unittest discover ./src/tests
+
+clean:
+	@echo "Removing existing virt env..."
+	rm -rf .venv
+
+data: .venv
 	@echo "Downloading data..."
 	$(PYTHON_INTERPRETER) -m src.data.download_raw_data
 	@echo "Filtering data..."
@@ -21,17 +29,11 @@ data: requirements
 	@echo "Data built succesfully!"
 
 requirements: .venv
-	# source .venv/Scripts/activate
-	# @echo "Installing required packages ..."
-	# $(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
-	# $(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+	@echo "Make sure to activate the virtualenv first!"
+    $(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
+    $(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 .venv:
 	@echo "Creating Virtual Environment..."
 	$(PYTHON_INTERPRETER) -m venv .venv
-	(	\
-		source ./.venv/Scripts/activate; \
-		$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel; \
-		$(PYTHON_INTERPRETER) -m pip install -r requirements.txt; \
-	)
-	@echo "Virtual Environment Created..."
+	@echo "Created virtual environment in ./.venv. Please activate the environment."
