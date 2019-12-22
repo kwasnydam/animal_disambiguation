@@ -151,6 +151,29 @@ def build_text_dataset(read_directory, save_directory, encoding):
                     of.write(output_line)
 
 
+def train_validation_test_split(read_path, save_directory, encoding):
+    """Based on the processed text files from read_path create train-validation-test split"""
+    text_df = pd.read_csv(
+        read_path, sep=';', header=None, names=['text', 'class']
+        )
+    # let's split our data into 3 sets: train, validation, test with a fixed random seed for reproducibility
+    random_seed = 0
+    np.random.seed(0)
+    train_prop = 0.6
+    valid_prop = 0.2
+    train, validate, test = np.split(
+        text_df.sample(frac=1),
+        [int(train_prop*len(text_df)), int((train_prop+valid_prop)*len(text_df))]
+    )
+
+    # Finally, lets save our data
+    filenames = ['train', 'validation','test']
+    filenames = ['{}.csv'.format(filename) for filename in filenames]
+    data_splits = [train, validate, test]
+    for data, filename in zip(data_splits, filenames):
+        save_path = os.path.join(save_directory, filename)
+        data.to_csv(save_path, sep=';', index=False)
+
 class TextLabelsVectorizer:
     """Responsible for vectorization of text into feature vector (tfidf) and classes labels into binary labels
 
