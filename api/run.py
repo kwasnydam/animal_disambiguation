@@ -4,7 +4,7 @@ The API is documented using flask_resftul_swagger. The documentation for differe
 at /api/spec.html or by getting the raw json by /api/spec.html.
 
 Endpoints
-    /
+    /predict
 Methods
     GET
 

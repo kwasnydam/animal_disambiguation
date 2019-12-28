@@ -52,9 +52,9 @@ Why these?
 
 ### Application Architecture
  *  API - A simple RESTful API built with the Flask framework. Flask is a lightweighted choice good for prototyping.1
- The API will accept the GET query, check if it is valid (contains word mouse) and call the model to make the prediciton.
- It will then return the response containing the model prediction. There is no extensive data processing here, as it
- is part of the model
+ The API accepts the GET query, check if it is valid (contains word mouse) and call the model to make the prediciton.
+ It will then return the response containing the model prediction. There is no extensive data processing needed on the part of the API, as it
+ is part of the model pipeline. 
 
  *  Model - I have decided to build a model around the following concepts:
     *   Task - Binary Classification
