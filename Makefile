@@ -30,8 +30,8 @@ data: .venv
 
 requirements: .venv
 	@echo "Make sure to activate the virtualenv first!"
-    $(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
-    $(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
+	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 .venv:
 	@echo "Creating Virtual Environment..."
